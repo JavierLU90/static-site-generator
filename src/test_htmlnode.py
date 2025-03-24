@@ -1,5 +1,5 @@
 import unittest
-from htmlnode import HTMLNode, LeafNode
+from htmlnode import HTMLNode, LeafNode, ParentNode
 
 class TestHTMLNode(unittest.TestCase):
     def test_props_to_html_with_valid_props(self):
@@ -52,6 +52,118 @@ class TestHTMLNode(unittest.TestCase):
         node = LeafNode("p", None)
         with self.assertRaises(ValueError):
             node.to_html()
+
+    def test_to_html_with_children(self):
+        child_node = LeafNode("span", "child")
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(parent_node.to_html(), "<div><span>child</span></div>")
+
+    def test_to_html_with_grandchildren(self):
+        grandchild_node = LeafNode("b", "grandchild")
+        child_node = ParentNode("span", [grandchild_node])
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(
+            parent_node.to_html(),
+            "<div><span><b>grandchild</b></span></div>",
+        )
+    
+    def test_parent_with_mixed_children(self):
+        parent = ParentNode(
+            "div",
+            [
+                LeafNode("h1", "Title"),
+                ParentNode("section", [
+                    LeafNode("p", "Paragraph 1"),
+                    LeafNode("p", "Paragraph 2")
+                ]),
+                LeafNode("footer", "Page Footer")
+            ]
+        )
+        expected = "<div><h1>Title</h1><section><p>Paragraph 1</p><p>Paragraph 2</p></section><footer>Page Footer</footer></div>"
+        self.assertEqual(parent.to_html(), expected)
+    
+    def test_parent_with_props(self):
+        parent = ParentNode(
+            "nav", 
+            [LeafNode("a", "Home")], 
+            {"class": "navbar", "id": "main-nav"}
+        )
+        expected = '<nav class="navbar" id="main-nav"><a>Home</a></nav>'
+        self.assertEqual(parent.to_html(), expected)
+
+    def test_deeply_nested(self):
+        nested = ParentNode(
+            "ul",
+            [
+                ParentNode("li", [
+                    ParentNode("ul", [
+                        ParentNode("li", [
+                            LeafNode("span", "Deeply nested")
+                        ])
+                    ])
+                ])
+            ]
+        )
+        expected = "<ul><li><ul><li><span>Deeply nested</span></li></ul></li></ul>"
+        self.assertEqual(nested.to_html(), expected)
+    
+    def test_empty_children_list(self):
+        parent = ParentNode("div", [])
+        expected = "<div></div>"
+        self.assertEqual(parent.to_html(), expected)
+    
+    def test_missing_tag_error(self):
+        parent = ParentNode(None, [LeafNode("p", "Text")])
+        with self.assertRaises(ValueError) as context:
+            parent.to_html()
+        
+        self.assertEqual(str(context.exception), "ParentNode must have a tag")
+
+    def test_missing_children_error(self):
+        # Note: You'd normally not be able to create this state since the constructor requires children
+        # This test would only make sense if someone manually sets children to None after creation
+        parent = ParentNode("div", [])
+        parent.children = None
+        with self.assertRaises(ValueError) as context:
+            parent.to_html()
+    
+        self.assertEqual(str(context.exception), "ParentNode must have children")
+    
+    def test_mixed_leaf_nodes(self):
+        parent = ParentNode(
+            "p",
+            [
+                LeafNode("strong", "Important"),
+                LeafNode(None, " normal text "),
+                LeafNode("em", "emphasized")
+            ]
+        )
+        expected = "<p><strong>Important</strong> normal text <em>emphasized</em></p>"
+        self.assertEqual(parent.to_html(), expected)
+    
+    def test_nested_props(self):
+        parent = ParentNode(
+            "form",
+            [
+                LeafNode("input", "", {"type": "text", "name": "username"}),
+                LeafNode("input", "", {"type": "password", "name": "password"}),
+                LeafNode("button", "Submit", {"type": "submit"})
+            ],
+            {"action": "/login", "method": "post"}
+        )
+        expected = '<form action="/login" method="post"><input type="text" name="username"></input><input type="password" name="password"></input><button type="submit">Submit</button></form>'
+        self.assertEqual(parent.to_html(), expected)
+    
+    def test_special_characters(self):
+        parent = ParentNode(
+            "div",
+            [
+                LeafNode("p", "This is a paragraph with < and > symbols"),
+                LeafNode("p", "This has quotes: \"quoted text\"")
+            ]
+        )
+        expected = "<div><p>This is a paragraph with < and > symbols</p><p>This has quotes: \"quoted text\"</p></div>"
+        self.assertEqual(parent.to_html(), expected)
 
 if __name__ == '__main__':
     unittest.main()
