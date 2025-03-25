@@ -1,6 +1,7 @@
 import os
 import shutil
 from copystatic import copy_files_recursive
+from markdown_blocks import generate_page
 
 
 dir_path_static = "./static"
@@ -14,6 +15,12 @@ def main():
 
     print("Copying static files to public directory...")
     copy_files_recursive(dir_path_static, dir_path_public)
+
+    generate_page(
+        from_path="content/index.md",
+        template_path="template.html",
+        dest_path="public/index.html"
+    )
 
 
 if __name__ == "__main__":

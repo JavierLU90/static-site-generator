@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from htmlnode import ParentNode
 from text_processing import text_to_textnodes
@@ -156,3 +157,18 @@ def extract_title(markdown):
             header = first_block
             return header[1:].strip()
     raise Exception("There is no header")
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    with open(from_path, 'r') as file:
+        markdown_content = file.read()
+    with open(template_path, 'r') as file:
+        template_content = file.read()
+    html_node = markdown_to_html_node(markdown_content)
+    html_content = html_node.to_html()
+    title = extract_title(markdown_content)
+    final_html = template_content.replace("{{ Title }}", title).replace("{{ Content }}", html_content)
+    directory = os.path.dirname(dest_path)
+    os.makedirs(directory, exist_ok=True)
+    with open(dest_path, 'w') as file:
+        file.write(final_html)
